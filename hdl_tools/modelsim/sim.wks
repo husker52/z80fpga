@@ -1,0 +1,23 @@
+<NotepadPlus>
+    <Project name="simulations">
+        <Folder name="source">
+            <File name="C:\Users\brad.riensche\Documents\work\li7800\proto\z80test\z80test\altera\de0_top.vhd" />
+            <File name="C:\Users\brad.riensche\Documents\work\li7800\proto\z80test\z80test\altera\SEG7_LUT.v" />
+            <File name="C:\Users\brad.riensche\Documents\work\li7800\proto\z80test\z80test\altera\SEG7_LUT_4.v" />
+        </Folder>
+        <Folder name="test benches">
+            <File name="C:\Users\brad.riensche\Documents\work\li7800\proto\z80test\z80test\tb\bintobcd_tb.vhd" />
+            <File name="C:\Users\brad.riensche\Documents\work\li7800\proto\z80test\z80test\tb\debug_tb.vhd" />
+            <File name="C:\Users\brad.riensche\Documents\work\li7800\proto\z80test\z80test\tb\i2c_sim.vhd" />
+        </Folder>
+        <Folder name="simulation">
+            <File name="build_rtl.bat" />
+            <File name="sim_rtl.bat" />
+        </Folder>
+        <Folder name="bin2bcd">
+            <File name="C:\Users\brad.riensche\Documents\work\li7800\proto\z80test\z80test\opencores\binarytobcd\bcdconv.vhd" />
+            <File name="C:\Users\brad.riensche\Documents\work\li7800\proto\z80test\z80test\opencores\binarytobcd\bcdconvtb.vhd" />
+            <File name="C:\Users\brad.riensche\Documents\work\li7800\proto\z80test\z80test\opencores\binarytobcd\digit.vhd" />
+        </Folder>
+    </Project>
+</NotepadPlus>
