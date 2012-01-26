@@ -1,3 +1,4 @@
+sim	.equ	0
 	.area	TEXT	(CSEG,ABS)
 ;	.local	RXA
 ;************************
@@ -10,7 +11,7 @@
 ;************************
 ;ROM .EQUATES:         ³Use these equates for EPROM @ 0000H Version.
 OFFSET  = 0x0000;³Assembly offset
-SEV_UP  = 0x080 ;³Set bit seven in Address tables.
+SEV_UP  = 0x8000 ;³Set bit seven in Address tables.
 MASK_7  = 0x07F ;³Mask for above Assembly
 USR_OFF = 0x000 ;³Adjust USR Jump Addresses
 ;************************
@@ -1001,8 +1002,8 @@ TERM:   PUSH    HL
 ;* 
 TAB1    =     .                ; DIRECT COMMANDS
         .ascii    "LIST"
-;        .BYTE    LIST >> 8 + SEV_UP,LIST & 255
-		.WORD	LIST + (SEV_UP << 8)
+        .BYTE    LIST + SEV_UP,LIST
+;		.WORD	LIST + 0X8000
 		.ascii	"RUN"
 ;        .BYTE    RUN >> 8 + SEV_UP,RUN & 255
 		.WORD	RUN + (SEV_UP << 8)
@@ -2852,7 +2853,39 @@ IDONE:  POP     HL              ; GET H BACK
         POP     BC              ; AND B TOO
         RET                     ; DONE AT LAST
 
+	.ifdef	sim
+;------------------------------------------------------------------------------
+; RXA - Receive a byte over SIO/0 Ch A
+;------------------------------------------------------------------------------
+RXA:
+	CALL	CKSIOA		; Get the status word
+	JR		NC,RXA		; Loop until a character arrives
+	ld		a,0
+	OUT		(0),A		; zero out the flag
+	IN		A,(1)		; Get the character
+	RET					; Char ready in A
+;------------------------------------------------------------------------------
+; TXA - Transmit a byte over SIO/0 Ch A
+;------------------------------------------------------------------------------
+CHROUT:
+TXA:
+	PUSH	AF		; Store character
+	CALL	CKSIOA		; See if SIO channel A is finished transmitting
+	JR	Z,TXA+1		; Loop until SIO flag signals ready
+	POP	AF		; Retrieve character
+	OUT	(1),A		; Output the character
+	RET
 
+;------------------------------------------------------------------------------
+; Check SIO Channel A status flag, RX char ready=CY, TX buffer clear=NZ
+;------------------------------------------------------------------------------
+CKSIOA:
+	IN		a,(0)	;Retrieve Status Word
+	or		#0x80	; set Z=0 tx buffer clear
+	RRCA			;RX status into CY flag
+	LD		a,0
+	RET
+	.else
 ;------------------------------------------------------------------------------
 ; RXA - Receive a byte over SIO/0 Ch A
 ;------------------------------------------------------------------------------
@@ -2881,7 +2914,7 @@ CKSIOA:
 	RRCA			;RX status into CY flag
 	BIT	4,A		;TX Buffer Empty into Z flag
 	RET
-
+	.endif
 
 UART1_BASE	=	0x00
 RBR	=	UART1_BASE + 0x00
@@ -2941,6 +2974,7 @@ CHKIO:
 	JP		RSTART			; if it is control-c, restart
 CHKIO1:
 	CALL	CHROUT			; echo the character back
+	SCF
 CHKIOXIT:
 	RET
 
