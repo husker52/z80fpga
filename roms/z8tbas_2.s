@@ -49,7 +49,7 @@ USR000:
 ;        JP      DELAYS          ;ADD 1, 2, AND 3
 ;**************************************************************
         .ORG     0x4+OFFSET
-FLMOVE: .BYTE    0x000            ;@ 04H DISABLE MOVE
+FLMOVE: .BYTE    0x0FF            ;@ 04H DISABLE MOVE
 RES5:   .BYTE    0x0FF            ;@ 05H ENABLE ;;WAS DISK
 RES6:   .BYTE    0x0FF            ;@ 06H ENABLE ;;WAS KEYBOARD
 RES7:   .BYTE    0x0FF            ;@ 07H ENABLE ;;WAS VIDEO
@@ -648,17 +648,17 @@ HEXC00: AND     0x0F
         RET
 ;**************************************************************
 START:  IM	1
-	LD      SP,STACK        ; SET STACK POINTER
-	CALL	INIT16550
+		LD      SP,STACK        ; SET STACK POINTER
+		CALL	INIT16550
 ;        CALL    INIT_8255
         LD      A,0x0FF
         LD      BC,PITBASE+1
         OUT     (C),A           ;SET BITS HIGH
         LD      BC,0x70          ;5-OCT-87
-	IN	A,(C)		;TST 4 FRONT PANEL 		
-	CP	0x7F		;DEFAULT VALUE IF PRESENT
-	JR	NZ,NOFP
-	LD	(FRONT),A	;NZ = FRONT PANEL
+		IN	A,(C)		;TST 4 FRONT PANEL 		
+		CP	0x7F		;DEFAULT VALUE IF PRESENT
+		JR	NZ,NOFP
+		LD	(FRONT),A	;NZ = FRONT PANEL
 VERSNU: LD      HL,VERS         ;2-NOV-87
         LD      A,(HL)          ;GET VERSION
         SET     7,A             ;SET DECIMAL POINT
@@ -815,20 +815,20 @@ TC2:    INC     DE              ; IF =, SKIP THOSE BYTES
 	EX	(SP),HL
 	RET
 ;**************************************************************
-TSTNUM:	LD	HL,0		; *** TSTNUM ***
-        LD      B,H             ; TEST IF THE TEXT IS
-        RST     0x28	;8*5             ;IGNBLK; A NUMBER
-TN1:    CP      0x30             ; IF NOT, RETURN 0 IN
-	RET	C		; B AND HL
-        CP      0x3A;72Q             ; IF NUMBERS, CONVERT
-	RET	NC		; TO BINARY IN HL AND 
-        LD      A,0x0F0;360Q          ; SET A TO # OF DIGITS
-        AND     H               ; IF H>255, THERE IS NO
-	JP	NZ,QHOW		; ROOM FOR NEXT DIGIT 
-	INC	B		; B COUNTS # OF DIGITS
-	PUSH	BC
-	LD	B,H		; HL=10;*HL+(NEW DIGIT)
-	LD	C,L
+TSTNUM:	LD		HL,0		; *** TSTNUM ***
+        LD      B,H			; TEST IF THE TEXT IS
+        RST     0x28		; IGNBLK; A NUMBER
+TN1:    CP      0x30		; IF NOT, RETURN 0 IN
+		RET		C			; B AND HL
+        CP      0x3A		;72Q ; IF NUMBERS, CONVERT
+		RET		NC			; TO BINARY IN HL AND 
+        LD      A,0x0F0		;360Q ; SET A TO # OF DIGITS
+        AND     H			; IF H>255, THERE IS NO
+		JP		NZ,QHOW		; ROOM FOR NEXT DIGIT 
+		INC		B			; B COUNTS # OF DIGITS
+		PUSH	BC
+		LD		B,H			; HL=10;*HL+(NEW DIGIT)
+		LD		C,L
 	ADD	HL,HL		; WHERE 10;* IS DONE BY
 	ADD	HL,HL		; SHIFT AND ADD 
 	ADD	HL,BC
@@ -897,6 +897,7 @@ RSTART: LD      SP,STACK        ;SET STACK, READY PROMPT
 
 	SUB     A               ; A=0
 	CALL	PRTSTG		; PRINT STRING UNTIL 0DH
+	CALL	CRLF
 
 	LD      HL,ST2+1        ; LITERAL 0
 	LD	(CURRNT),HL	; CURRNT->LINE # = 0
@@ -1001,183 +1002,185 @@ TERM:   PUSH    HL
 ;* MATCH THIS NULL ITEM AS DEFAULT.
 ;* 
 TAB1    =     .                ; DIRECT COMMANDS
-        .ascii    "LIST"
-        .BYTE    LIST + SEV_UP,LIST
-;		.WORD	LIST + 0X8000
-		.ascii	"RUN"
+        .ascii    "LIST\0"
+;        .BYTE    LIST + SEV_UP,LIST
+		.WORD	LIST
+		.ascii	"RUN\0"
 ;        .BYTE    RUN >> 8 + SEV_UP,RUN & 255
-		.WORD	RUN + (SEV_UP << 8)
-		.ascii	"NEW"
+		.WORD	RUN
+		.ascii	"NEW\0"
 ;        .BYTE    NEW >> 8 + SEV_UP,NEW & 255
-		.WORD	NEW + (SEV_UP << 8)
-		.ascii	"LOAD"
+		.WORD	NEW 
+		.ascii	"LOAD\0"
 ;        .BYTE    DLOAD >> 8 + SEV_UP,DLOAD & 255
-		.WORD	DLOAD + (SEV_UP << 8)
-		.ascii	"SAVE"
+		.WORD	DLOAD 
+		.ascii	"SAVE\0"
  ;       .BYTE    DSAVE >> 8 + SEV_UP,DSAVE & 255
-		.WORD	DSAVE + (SEV_UP << 8)
+		.WORD	DSAVE 
 ;        .BYTE    "BYE"
 ;        .BYTE    80H,0H    ; GO BACK TO CPM
 
 TAB2    =     .               ; DIRECT/STATEMENT
-        .ascii    "OUT"
+        .ascii    "OUT\0"
 ;        .BYTE    OUTCMD >> 8 + SEV_UP,OUTCMD & 255
-		.WORD	OUTCMD + (SEV_UP << 8)
-        .ascii    "WAIT"
+		.WORD	OUTCMD 
+        .ascii    "WAIT\0"
 ;        .BYTE    WAITCM >> 8 + SEV_UP,WAITCM & 255
-		.WORD	WAITCM + (SEV_UP << 8)
-        .ascii    "POKE"
+		.WORD	WAITCM 
+        .ascii    "POKE\0"
 ;        .BYTE    POKE >> 8 + SEV_UP,POKE & 255
-		.WORD	POKE + (SEV_UP << 8)
-        .ascii    "NEXT"
+		.WORD	POKE 
+        .ascii    "NEXT\0"
 ;        .BYTE    NEXT >> 8 + SEV_UP,NEXT & 255
-		.WORD 	NEXT + (SEV_UP << 8)
-		.ascii	"LET"
+		.WORD 	NEXT 
+		.ascii	"LET\0"
 ;        .BYTE    LET >> 8 + SEV_UP,LET & 255
-		.WORD	LET + (SEV_UP << 8)
-		.ascii	"IF"
+		.WORD	LET
+		.ascii	"IF\0"
 ;        .BYTE    IFF >> 8 + SEV_UP,IFF & 255
-		.WORD	IFF + (SEV_UP << 8)
-		.ascii	"GOTO"
+		.WORD	IFF 
+		.ascii	"GOTO\0"
 ;        .BYTE    GOTO >> 8 + SEV_UP,GOTO & 255
-		.WORD	GOTO + (SEV_UP << 8)
-		.ascii	"GOSUB"
+		.WORD	GOTO 
+		.ascii	"GOSUB\0"
 ;        .BYTE    GOSUB >> 8 + SEV_UP,GOSUB & 255
-		.WORD	GOSUB + (SEV_UP << 8)
-		.ascii	"RETURN"
+		.WORD	GOSUB 
+		.ascii	"RETURN\0"
 ;        .BYTE    RETURN >> 8 + SEV_UP,RETURN & 255
-		.WORD	RETURN + (SEV_UP << 8)
-        .BYTE    0x27
+		.WORD	RETURN 
+		.ASCII	"'\0"
+;        .BYTE    0x27
 ;        .BYTE    REM >> 8 + SEV_UP,REM & 255
-		.WORD	REM + (SEV_UP << 8)
-        .ascii    "REM"
+		.WORD	REM 
+        .ascii    "REM\0"
 ;        .BYTE    REM >> 8 + SEV_UP,REM & 255
-		.WORD	REM + (SEV_UP << 8)
-        .ascii    "FOR"
+		.WORD	REM 
+        .ascii    "FOR\0"
 ;        .BYTE    FOR >> 8 + SEV_UP,FOR & 255
-		.WORD	FOR + (SEV_UP << 8)
-		.ascii	"INPUT"
+		.WORD	FOR
+		.ascii	"INPUT\0"
 ;        .BYTE    INPUT >> 8 + SEV_UP,INPUT & 255
-		.WORD	INPUT + (SEV_UP << 8)
-        .ascii    "?"
+		.WORD	INPUT 
+        .ascii    "?\0"
 ;        .BYTE    PRINT >> 8 + SEV_UP,PRINT & 255
-		.WORD	PRINT + (SEV_UP << 8)
-        .ascii    "PRINT"
+		.WORD	PRINT 
+        .ascii    "PRINT\0"
 ;        .BYTE    PRINT >> 8 + SEV_UP,PRINT & 255
-		.WORD	+ (SEV_UP << 8)
-        .ascii    "STOP"
+		.WORD	PRINT 
+        .ascii    "STOP\0"
 ;        .BYTE    STOP >> 8 + SEV_UP,STOP & 255
-		.WORD	STOP + (SEV_UP << 8)
-        .ascii    "START"
+		.WORD	STOP 
+        .ascii    "START\0"
 ;        .BYTE    START >> 8 + SEV_UP,START & 255
-		.WORD	START + (SEV_UP << 8)
-        .ascii    "OLD"
+		.WORD	START 
+        .ascii    "OLD\0"
 ;        .BYTE    OLD >> 8 + SEV_UP,OLD & 255
-		.WORD	OLD + (SEV_UP << 8)
-        .ascii    "MOVE"
+		.WORD	OLD 
+        .ascii    "MOVE\0"
 ;        .BYTE    MOVE >> 8 + SEV_UP,MOVE & 255
-		.WORD	MOVE + (SEV_UP << 8)
+		.WORD	MOVE 
 ;        .BYTE    DEFLT >> 8 + SEV_UP,DEFLT & 255
-		.WORD	DEFLT + (SEV_UP << 8)
+		.WORD	DEFLT 
 ;        .BYTE    "YOU CAN ADD MORE" ; COMMANDS BUT
 				; REMEMBER TO MOVE DEFAULT DOWN.
 
 TAB4    =     .               ; FUNCTIONS 
-        .ascii    "INP"
+        .ascii    "INP\0"
 ;        .BYTE    INP >> 8 + SEV_UP,INP & 255
-		.WORD	INP + (SEV_UP << 8)
-        .ascii    "PEEK"
+		.WORD	INP 
+        .ascii    "PEEK\0"
 ;        .BYTE    PEEK >> 8 + SEV_UP,PEEK & 255
-		.WORD	PEEK + (SEV_UP << 8)
-        .ascii    "USR"
+		.WORD	PEEK 
+        .ascii    "USR\0"
 ;        .BYTE    USR >> 8 + SEV_UP,USR & 255
-		.WORD	USR + (SEV_UP << 8)
-        .ascii    "RND"
+		.WORD	USR 
+        .ascii    "RND\0"
 ;        .BYTE    RND >> 8 + SEV_UP,RND & 255
-		.WORD	RND + (SEV_UP << 8)
-		.ascii	"ABS"
+		.WORD	RND 
+		.ascii	"ABS\0"
 ;        .BYTE    ABS >> 8 + SEV_UP,ABS & 255
-		.WORD	ABS + (SEV_UP << 8)
-        .ascii    "MEM"
+		.WORD	ABS 
+        .ascii    "MEM\0"
 ;        .BYTE    SIZE >> 8 + SEV_UP,SIZE & 255
-		.WORD	SIZE + (SEV_UP << 8)
+		.WORD	SIZE 
 
 ;        .BYTE    XP40 >> 8 + SEV_UP,XP40 & 255
-		.WORD	XP40 + (SEV_UP << 8)
+		.WORD	XP40 
 ;        .BYTE    'YOU CAN ADD MORE' ; FUNCTIONS BUT REMEMBER
 				; TO MOVE XP40 DOWN
 
 TAB5    =     .               ; "TO" IN "FOR" 
-		.ascii	"TO"
+		.ascii	"TO\0"
 ;        .BYTE    FR1 >> 8 + SEV_UP,FR1 & 255
-		.WORD	FR1 + (SEV_UP << 8)
+		.WORD	FR1 
 ;        .BYTE    QWHAT >> 8 + SEV_UP,QWHAT & 255
-		.WORD	QWHAT + (SEV_UP << 8)
+		.WORD	QWHAT 
 TAB6	=	.		; "STEP" IN "FOR" 
-		.ascii	"STEP"
+		.ascii	"STEP\0"
 ;        .BYTE    FR2 >> 8 + SEV_UP,FR2 & 255
-		.WORD	FR2 + (SEV_UP << 8)
+		.WORD	FR2 
 ;        .BYTE    FR3 >> 8 + SEV_UP,FR3 & 255
-		.WORD	FR3 + (SEV_UP << 8)
+		.WORD	FR3 
 
 TAB8    =     .               ; RELATION OPERATORS
 
-        .ascii    ">="
+        .ascii    ">=\0"
 ;        .BYTE    GTE >> 8 + SEV_UP,GTE & 255
-		.WORD	GTE + (SEV_UP << 8)
-        .ascii    "<>"
+		.WORD	GTE 
+        .ascii    "<>\0"
 ;        .BYTE    NOTEQU >> 8 + SEV_UP,NOTEQU & 255
-		.WORD	NOTEQU + (SEV_UP << 8)
-		.ascii	">"
+		.WORD	NOTEQU 
+		.ascii	">\0"
 ;        .BYTE    GREATER >> 8 + SEV_UP,GREATER & 255
-		.WORD	GREATER + (SEV_UP << 8)
-		.ascii	"="
+		.WORD	GREATER 
+		.ascii	"=\0"
 ;        .BYTE    EQUAL >> 8 + SEV_UP,EQUAL & 255
-		.WORD	EQUAL + (SEV_UP << 8)
-		.ascii	"<="
+		.WORD	EQUAL 
+		.ascii	"<=\0"
 ;        .BYTE    LESSEQ >> 8 + SEV_UP,LESSEQ & 255
-		.WORD	LESSEQ + (SEV_UP << 8)
-		.ascii	"<"
+		.WORD	LESSEQ 
+		.ascii	"<\0"
 ;        .BYTE    LESS >> 8 + SEV_UP,LESS & 255
-		.WORD	LESS + (SEV_UP << 8)
+		.WORD	LESS 
 ;        .BYTE    (NOTREL >> 8) + SEV_UP,NOTREL & 255
-        .WORD    NOTREL + (SEV_UP << 8)
+        .WORD    NOTREL 
 ;* 
-DIRECT:	LD	HL,TAB1-1	; *** DIRECT ***
+DIRECT:	LD		HL,TAB1-1	; *** DIRECT ***
 ;* 
 EXEC	=	.		; *** EXEC ***
 EX0:    RST     0x28	;8*5             ; IGNORE LEADING BLANKS
-	PUSH	DE		; SAVE POINTER
-EX1:    LD      A,(DE)          ; IF FOUND '.' IN STRING
-	INC	DE		; BEFORE ANY MISMATCH 
-        CP      '.             ; WE DECLARE A MATCH
-	JP	Z,EX3
-	INC	HL		; HL->TABLE 
-        CP      (HL)            ; IF MATCH, TEST NEXT
-	JP	Z,EX1
-        LD      A,0x7F           ; ELSE, SEE IF BIT 7
-	DEC	DE		; OF TABLEIS SET, WHICH
-	CP	(HL)		; IS THE JUMP ADDR. (HI)
-	JP	C,EX5		; C:YES, MATCHED
-EX2:	INC	HL		; NC:NO, FIND JUMP ADDR.
-	CP	(HL)
-	JP	NC,EX2
-	INC	HL		; BUMP TO NEXT TAB. ITEM
-	POP	DE		; RESTORE STRING POINTER
-	JP	EX0		; TEST AGAINST NEXT ITEM
-EX3:    LD      A,0x7F           ; PARTIAL MATCH, FIND
-EX4:	INC	HL		; JUMP ADDR., WHICH IS
-	CP	(HL)		; FLAGGED BY BIT 7
-	JP	NC,EX4
-EX5:	LD	A,(HL)		; LOAD HL WITH THE JUMP 
-	INC	HL		; ADDRESS FROM THE TABLE
-	LD	L,(HL)
-
-        AND     MASK_7;7FH             ; MASK OFF BIT 7
-
-        LD      H,A
-	POP	AF		; CLEAN UP THE GABAGE 
-	JP	(HL)		; AND WE GO DO IT 
+		PUSH	DE		; SAVE POINTER
+EX1:	LD      A,(DE)	; IF FOUND '.' IN STRING
+		INC		DE		; BEFORE ANY MISMATCH 
+        CP      '. 		; WE DECLARE A MATCH
+		JP		Z,EX3
+		INC		HL		; HL->TABLE 
+        CP      (HL)	; IF MATCH, TEST NEXT
+		JP		Z,EX1
+        LD      A,0x00	; ELSE, SEE IF BIT 7
+		DEC		DE		; OF TABLEIS SET, WHICH
+		CP		(HL)	; IS THE JUMP ADDR. (HI)
+		JP		Z,EX5	; C:YES, MATCHED
+EX2:	INC		HL		; NC:NO, FIND JUMP ADDR.
+		CP		(HL)
+		JP		NZ,EX2
+		INC		HL		; BUMP TO NEXT TAB. ITEM
+		INC		HL
+		POP		DE		; RESTORE STRING POINTER
+		JP		EX0		; TEST AGAINST NEXT ITEM
+EX3:    LD      A,0x00	; PARTIAL MATCH, FIND
+EX4:	INC		HL		; JUMP ADDR., WHICH IS
+		CP		(HL)	; FLAGGED BY BIT 7
+		JP		NZ,EX4
+EX5:	
+		INC		HL
+		LD		A,(HL)	; LOAD HL WITH THE JUMP 
+		INC		HL		; ADDRESS FROM THE TABLE
+		LD		H,(HL)
+;		AND     MASK_7;7FH             ; MASK OFF BIT 7
+		LD      L,A
+		POP		AF		; CLEAN UP THE GABAGE 
+		JP		(HL)	; AND WE GO DO IT 
 ;**************************************************************
 ;* WHAT FOLLOWS IS THE CODE TO EXECUTE DIRECT AND STATEMENT
 ;* COMMANDS.  CONTROL IS TRANSFERED TO THESE POINTS VIA THE
@@ -3017,15 +3020,13 @@ ROMBAS  =     0x1000
 ;
 ;SAMPLE PROGRAM IN ROM
 ;
-;        .ORG     ROMBAS+OFFSET
+		.ORG     ROMBAS+OFFSET
 ;
-;        DEFW    10                     ;LINE NO# 10
-;        .BYTE    'A=INP(2):?A'          ;A=INP(2):?A
-;        .BYTE    CR                     ;CARRAIGE RETURN
-;        DEFW    20                     ;LINE NO# 20
-;        .BYTE    'GOTO 10'              ;GOTO 10
-;        .BYTE    CR                     ;CR
-;        .BYTE    00,00                  ;ZERO BYTES TERM.
+		.WORD	10                     ;LINE NO# 10
+		.ASCII	"A=INP(2):?A"          ;A=INP(2):?A
+		.WORD	20                     ;LINE NO# 20
+		.ASCII    "GOTO 10\r"              ;GOTO 10
+		.BYTE    00,00                  ;ZERO BYTES TERM.
 ;
 ;**************************************************************
 ;TXTBGN  =     0x8000           ; TEXT SAVE AREA BEGINS
