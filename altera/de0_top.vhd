@@ -31,18 +31,18 @@ entity de0_top is
 		UART_CTS		: out std_ulogic;						--	UART Clear To Send
 		UART_RTS		: in std_ulogic;						--	UART Request To Send
 		--/////////////////////	SDRAM Interface		////////////////
-		DRAM_DQ			: inout std_ulogic_vector(15 downto 0);						--	SDRAM Data bus 16 Bits
-		DRAM_ADDR		: out std_ulogic_vector(12 downto 0);						--	SDRAM Address bus 13 Bits
-		DRAM_LDQM		: out std_ulogic;						--	SDRAM Low-byte Data Mask 
-		DRAM_UDQM		: out std_ulogic;						--	SDRAM High-byte Data Mask
-		DRAM_WE_N		: out std_ulogic;						--	SDRAM Write Enable
-		DRAM_CAS_N		: out std_ulogic;						--	SDRAM Column Address Strobe
-		DRAM_RAS_N		: out std_ulogic;						--	SDRAM Row Address Strobe
-		DRAM_CS_N		: out std_ulogic;						--	SDRAM Chip Select
-		DRAM_BA_0		: out std_ulogic;						--	SDRAM Bank Address 0
-		DRAM_BA_1		: out std_ulogic;						--	SDRAM Bank Address 1
-		DRAM_CLK		: out std_ulogic;						--	SDRAM Clock
-		DRAM_CKE		: out std_ulogic;						--	SDRAM Clock Enable
+		DRAM_DQ			: inout std_logic_vector(15 downto 0);						--	SDRAM Data bus 16 Bits
+		DRAM_ADDR		: out std_logic_vector(12 downto 0);						--	SDRAM Address bus 13 Bits
+		DRAM_LDQM		: out std_logic;						--	SDRAM Low-byte Data Mask 
+		DRAM_UDQM		: out std_logic;						--	SDRAM High-byte Data Mask
+		DRAM_WE_N		: out std_logic;						--	SDRAM Write Enable
+		DRAM_CAS_N		: out std_logic;						--	SDRAM Column Address Strobe
+		DRAM_RAS_N		: out std_logic;						--	SDRAM Row Address Strobe
+		DRAM_CS_N		: out std_logic;						--	SDRAM Chip Select
+		DRAM_BA_0		: out std_logic;						--	SDRAM Bank Address 0
+		DRAM_BA_1		: out std_logic;						--	SDRAM Bank Address 1
+		DRAM_CLK		: out std_logic;						--	SDRAM Clock
+		DRAM_CKE		: out std_logic;						--	SDRAM Clock Enable
 		--////////////////////	Flash Interface		////////////////
 		FL_DQ			: inout std_ulogic_vector(14 downto 0);							--	FLASH Data bus 15 Bits
 		FL_DQ15_AM1		: inout std_ulogic;					--	FLASH Data bus Bit 15 or Address A-1
@@ -149,8 +149,15 @@ component DebugSystem is
 		RTS1		: out std_logic;
 		DTR1		: out std_logic;
 	
-		uart0_cs_out : out std_logic
-
+		uart0_cs_out : out std_logic;
+		addr_out	: out std_logic_vector(15 downto 0);
+		SDRAM_D		: in std_logic_vector(7 downto 0);
+		USERIO_D	: in std_logic_vector(7 downto 0);
+		DATA_OUT	: out  std_logic_vector(7 downto 0);
+		rd_n_out	: out std_logic;
+		wr_n_out	: out std_logic;
+		USERIOCS_n	: out std_logic;
+		SDRAMCS_n	: out std_logic
 	);
 end component;
 
@@ -165,6 +172,47 @@ component BCDConv is
        );
 end component;
 
+component sdram_controller is
+port
+  (
+	clk_i				: in std_logic;
+	dram_clk_i			: in std_logic;
+	rst_i				: in std_logic;
+	dll_locked			: in std_logic;
+-- all ddr signals
+	dram_addr			: out	std_logic_vector(11 downto 0);
+	dram_bank			: out	std_logic_vector(1 downto 0);
+	dram_cas_n			: out	std_logic;
+	dram_cke			: out	std_logic;
+	dram_clk			: out	std_logic;
+	dram_cs_n			: out	std_logic;
+	dram_dq				: inout	std_logic_vector(15 downto 0);
+	dram_ldqm			: out	std_logic;
+	dram_udqm			: out	std_logic;
+	dram_ras_n			: out	std_logic;
+	dram_we_n			: out	std_logic;
+-- wishbone bus
+	addr_i				: in	std_logic_vector(21 downto 0);
+	dat_i				: in	std_logic_vector(31 downto 0);
+	dat_o				: out	std_logic_vector(31 downto 0);
+	we_i				: in	std_logic;
+	ack_o				: out	std_logic;
+	stb_i				: in	std_logic;
+	cyc_i				: in	std_logic
+   );
+end component;
+
+component sdpll IS
+	PORT
+	(
+		inclk0		: IN STD_LOGIC  := '0';
+		c0		: OUT STD_LOGIC ;
+		c1		: OUT STD_LOGIC ;
+		c2		: OUT STD_LOGIC ;
+		locked		: OUT STD_LOGIC 
+	);
+END component;
+
 signal ROM_DATA : std_logic_vector(7 downto 0);
 signal ROM_ADDR : std_logic_vector(18 downto 0);
 signal WE_L : std_logic;
@@ -178,13 +226,39 @@ signal disp_count : std_logic;
 
 signal vga_vs_last : std_logic;
 signal cnt_edge : std_logic;
-signal digits : std_logic_vector(15 downto 0);
+signal digits : std_logic_vector(15 downto 0) ;
 signal sec_tmp	: unsigned(7 downto 0);
 signal min_tmp	: unsigned(7 downto 0);
 signal dcnt		: unsigned(4 downto 0);
 signal bcd_st	: std_logic;
 
+signal dram_bank	: std_logic_vector(1 downto 0);
+signal clk0			: std_logic;
+signal clk1			: std_logic;
+signal clk2			: std_logic;
+signal dll_locked	: std_logic;
+--wishbone signals
+signal addr			: std_logic_vector(15 downto 0);
+signal dat_i		: std_logic_vector(31 downto 0);
+signal dat_o		: std_logic_vector(31 downto 0);
+signal we			: std_logic;
+signal ack			: std_logic;
+signal stb			: std_logic;
+signal cyc			: std_logic;
+signal wr_n			: std_logic;
+signal sdram_cs_n	: std_logic;
+signal userio_cs_n	: std_logic;
+signal userio_d		: std_logic_vector(7 downto 0);
+signal rd_n			: std_logic;
+signal data_out		: std_logic_vector(7 downto 0);
+signal count		: unsigned(7 downto 0);
+
 begin
+	we <= not wr_n;
+	stb <= not sdram_cs_n;
+	cyc <= not sdram_cs_n;
+	
+	
 	ledg(0) <= button(2);
 	ledg(1) <= sw(0);
 	ledg(2) <= '1';
@@ -212,10 +286,18 @@ begin
 		RTS0 => UART_CTS,
 --		DTR0 => mon_dtr,
 		
-		uart0_cs_out => gpio0_d(8)
+		uart0_cs_out => gpio0_d(8),
 --		TXD1		
 --		RTS1		
 --		DTR1		
+		addr_out	=> addr,
+		SDRAM_D		=> dat_o(7 downto 0),
+		USERIO_D	=> userio_d,
+		DATA_OUT	=> data_out,
+		rd_n_out	=> rd_n,
+		wr_n_out	=> wr_n,
+		USERIOCS_n	=> userio_cs_n,
+		SDRAMCS_n	=> sdram_cs_n
 	);
 
 	u1 :  BCDConv
@@ -224,9 +306,9 @@ begin
 			Clock	=> clock_50,
 			Reset	=> '0',
 			Init	=> bcd_st,
-			ModIn	=> min_tmp(7),
+			ModIn	=> min_tmp(7)
 --			ModOut 
-			Q => digits(15 downto 8)
+--			Q => digits(15 downto 8)
 	);
 	u2 :  BCDConv
 		generic map(N => 2)     -- number of digits
@@ -234,9 +316,9 @@ begin
 			Clock	=> clock_50,
 			Reset	=> '0',
 			Init	=> bcd_st,
-			ModIn	=> sec_tmp(7),
+			ModIn	=> sec_tmp(7)
 --			ModOut 
-			Q => digits(7 downto 0)
+--			Q => digits(7 downto 0)
 	);
 	
 	gpio0_d(0) <= mon_txd;
@@ -333,6 +415,22 @@ begin
 			end if;
 		end if;
 	end process;
+
+	process(clock_50)
+	begin
+		if(rising_edge(clock_50)) then
+			if userio_cs_n = '0' and wr_n = '0' then
+				count <= count + 1;
+				if addr(4 downto 0) = "00000" then
+					digits(7 downto 0) <= data_out;--std_logic_vector(count);
+--					digits(15 downto 8) <= data_out;
+				elsif addr(4 downto 0) = "00001" then
+					digits(15 downto 8) <= data_out;
+				end if;
+			end if;
+		end if;
+	end process;
+	userio_d <= digits(7 downto 0) when addr(4 downto 0) = "00000" else digits(15 downto 8);
 	
 	display : SEG7_LUT_4
 	port map (
@@ -349,7 +447,44 @@ begin
 		iDIG => digits
 	);
 
-	
+sdram: sdram_controller
+port map
+  (
+	clk_i				=> clk0,
+	dram_clk_i			=> clk2,
+	rst_i				=> not button(2),
+	dll_locked			=> dll_locked,
+-- all ddr signals      
+	dram_addr			=> DRAM_ADDR(11 downto 0),
+	dram_bank			=> dram_bank,
+	dram_cas_n			=> DRAM_CAS_N,
+	dram_cke			=> DRAM_CKE,
+	dram_clk			=> DRAM_CLK,
+	dram_cs_n			=> DRAM_CS_N,
+	dram_dq				=> DRAM_DQ,
+	dram_ldqm			=> DRAM_LDQM,
+	dram_udqm			=> DRAM_UDQM,
+	dram_ras_n			=> DRAM_RAS_N,
+	dram_we_n			=> DRAM_WE_N,
+-- wishbone bus         
+	addr_i				=> "000000" & addr,
+	dat_i				=> dat_i,
+	dat_o				=> dat_o,
+	we_i				=> we,
+	ack_o				=> ack,
+	stb_i				=> stb,
+	cyc_i				=> cyc
+   );
+
+	pll : sdpll 
+	PORT map
+	(
+		inclk0 	=>	CLOCK_50,
+		c0		=>	clk0,
+		c1		=>	clk1,
+		c2		=>	clk2,
+		locked	=>	dll_locked
+	);
 	
 
 end rtl;

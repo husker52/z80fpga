@@ -815,38 +815,55 @@ TC2:    INC     DE              ; IF =, SKIP THOSE BYTES
 	EX	(SP),HL
 	RET
 ;**************************************************************
-TSTNUM:	LD		HL,0		; *** TSTNUM ***
-        LD      B,H			; TEST IF THE TEXT IS
-        RST     0x28		; IGNBLK; A NUMBER
-TN1:    CP      0x30		; IF NOT, RETURN 0 IN
-		RET		C			; B AND HL
-        CP      0x3A		;72Q ; IF NUMBERS, CONVERT
-		RET		NC			; TO BINARY IN HL AND 
-        LD      A,0x0F0		;360Q ; SET A TO # OF DIGITS
-        AND     H			; IF H>255, THERE IS NO
-		JP		NZ,QHOW		; ROOM FOR NEXT DIGIT 
-		INC		B			; B COUNTS # OF DIGITS
-		PUSH	BC
-		LD		B,H			; HL=10;*HL+(NEW DIGIT)
-		LD		C,L
-	ADD	HL,HL		; WHERE 10;* IS DONE BY
-	ADD	HL,HL		; SHIFT AND ADD 
-	ADD	HL,BC
-	ADD	HL,HL
-	LD	A,(DE)		; AND (DIGIT) IS FROM 
-	INC	DE		; STRIPPING THE ASCII 
-        AND     0X0F             ; CODE
-	ADD	A,L
-	LD	L,A
-	LD	A,0
-	ADC	A,H
-	LD	H,A
-	POP	BC
-	LD	A,(DE)		; DO THIS DIGIT AFTER 
-	JP	P,TN1		; DIGIT. S SAYS OVERFLOW
-QHOW:	PUSH	DE		; *** ERROR: "HOW?" *** 
-AHOW:	LD	DE,HOW
-	JP	ERROR
+; TSTNUM - see if input is a number
+;
+;	arguments:
+;	DE = pointer to input data
+;
+;	returns:
+;	B = number of digits
+;	HL = 	
+; 
+;**************************************************************
+TSTNUM:	
+	LD		HL,0		; *** TSTNUM ***
+    LD      B,H			; TEST IF THE TEXT IS
+    RST     0x28		; IGNBLK; A NUMBER
+TN1:
+    CP      '0			; IF NOT, RETURN 0 IN
+	RET		C			; B AND HL (br lt)
+    CP      '9 +1		;72Q ; IF NUMBERS, CONVERT
+	RET		NC			; TO BINARY IN HL AND (br ge)
+	
+    LD      A,0x0F0		;360Q ; SET A TO # OF DIGITS
+    AND     H			; IF H>255, THERE IS NO
+	JP		NZ,QHOW		; ROOM FOR NEXT DIGIT 
+	INC		B			; B COUNTS # OF DIGITS
+	PUSH	BC
+	LD		B,H			; HL=10;*HL+(NEW DIGIT)
+	LD		C,L
+	ADD		HL,HL		; WHERE 10;* IS DONE BY
+	ADD		HL,HL		; SHIFT AND ADD 
+	ADD		HL,BC
+	ADD		HL,HL
+	LD		A,(DE)		; AND (DIGIT) IS FROM 
+	INC		DE			; STRIPPING THE ASCII 
+    AND     0X0F        ; CODE
+	ADD		A,L
+	LD		L,A
+	LD		A,0
+	ADC		A,H
+	LD		H,A
+	POP		BC
+	LD		A,(DE)		; DO THIS DIGIT AFTER 
+	JP		P,TN1		; DIGIT. S SAYS OVERFLOW
+QHOW:		
+	PUSH	DE			; *** ERROR: "HOW?" *** 
+AHOW:		
+	LD		DE,HOW
+	JP		ERROR
+;**************************************************************
+
 HOW:    .ASCII    "How?"
 		.BYTE	CR
 READY:  .ASCII    "PBUFF Ready when "
@@ -856,7 +873,8 @@ WHAT:   .ASCII    "What?"
 		.BYTE	CR
 SORRY:  .ASCII    "Sorry"
 		.BYTE	CR
-;**************************************************************
+
+		;**************************************************************
 ;* *** MAIN ***
 ;* 
 ;* THIS IS THE MAIN LOOP THAT COLLECTS THE TINY BASIC PROGRAM
@@ -1415,7 +1433,9 @@ NOTMOVE:
 ;* PRINTED OR IF THE LIST IS A NULL LIST.  HOWEVER IF THE LIST
 ;* ENDED WITH A COMMA, NO (CRL) IS GENERATED. 
 ;* 
-LIST:   CALL    TSTNUM          ; TEST IF THERE IS A #
+LIST:
+;	LD	HL,TXTBGN		; TODO: speculating that this might give a proper listing
+	CALL    TSTNUM          ; TEST IF THERE IS A #
         CALL    ENDCHK          ; IF NO # WE GET A 0
 	CALL	FNDLN		; FIND THIS OR NEXT LINE
 LS1:	JP	C,RSTART	; C:PASSED TXTUNF 

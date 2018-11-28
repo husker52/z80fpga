@@ -28,7 +28,15 @@ entity DebugSystem is
 		RTS1		: out std_logic;
 		DTR1		: out std_logic;
 		
-		uart0_cs_out : out std_logic
+		uart0_cs_out : out std_logic;
+		addr_out	: out std_logic_vector(15 downto 0);
+		SDRAM_D		: in std_logic_vector(7 downto 0);
+		USERIO_D	: in std_logic_vector(7 downto 0);
+		DATA_OUT	: out  std_logic_vector(7 downto 0);
+		rd_n_out	: out std_logic;
+		wr_n_out	: out std_logic;
+		USERIOCS_n	: out std_logic;
+		SDRAMCS_n	: out std_logic
 	);
 end DebugSystem;
 
@@ -62,6 +70,8 @@ architecture struct of DebugSystem is
 	signal UART1CS_n	: std_logic;
 	signal UART0CS		: std_logic;
 	signal UART1CS		: std_logic;
+	signal SDRAMCS_n_o	: std_logic;
+	signal USERIOCS_n_o	: std_logic;
 
 	signal BaudOut0		: std_logic;
 	signal BaudOut1		: std_logic;
@@ -78,13 +88,15 @@ architecture struct of DebugSystem is
 	signal sda_i   	: std_logic;
 	signal sda_o   	: std_logic;
 	signal sda_oe	: std_logic;
-		
+
+	
 begin
 
 	Wait_n <= '1';
 	BusRq_n <= '1';
 	INT_n <= '1';
 
+	
 	process (Reset_n, Clk)
 	begin
 		if Reset_n = '0' then
@@ -100,18 +112,30 @@ begin
 
 	IOWR_n <= WR_n or IORQ_n;
 	RAMCS_n <= (not Mirror and not A(15)) or MREQ_n;
-	SRAM2CS_n <= '0' when MREQ_n = '0' and A(15 downto 11) = "00110" else '1';
-	UART0CS_n <= '0' when IORQ_n = '0' and A(7 downto 3) = "00000" else '1';
-	UART1CS_n <= '0' when IORQ_n = '0' and A(7 downto 3) = "10000" else '1';
+	--RAMCS_n <= '0' when MREQ_n = '0' and (A(15) = '1') and (Mirror = '0') else '1';
+	SDRAMCS_n_o <= '0' when MREQ_n = '0' and A(15 downto 11) 	= "01000" else '1';
+	USERIOCS_n_o <= '0' when MREQ_n = '0' and A(15 downto 11) 	= "01010" else '1';
+	SRAM2CS_n <= '0' when MREQ_n = '0' and A(15 downto 11) 		= "00110" else '1';
+	UART0CS_n <= '0' when IORQ_n = '0' and A(7 downto 3) 		= "00000" else '1';
+	UART1CS_n <= '0' when IORQ_n = '0' and A(7 downto 3) 		= "10000" else '1';
 	
 	uart0_cs_out <= uart0cs_n;
+	SDRAMCS_n <= SDRAMCS_n_o;
+	USERIOCS_n <= USERIOCS_n_o;
+	DATA_OUT <= D;
+	rd_n_out <= rd_n;
+	wr_n_out <= wr_n;
+	addr_out <= A;
 	
 	CPU_D <=
 		SRAM_D when RAMCS_n = '0' else
 		UART0_D when UART0CS_n = '0' else
 		UART1_D when UART1CS_n = '0' else
 		SRAM2_D when SRAM2CS_n = '0' else
+		SDRAM_D when SDRAMCS_n_o = '0' else
+		USERIO_D when USERIOCS_n_o = '0' else
 		ROM_D;
+
 
 	u0 : entity work.T80s
 			generic map(Mode => 1, T2Write => 1, IOWait => 0)

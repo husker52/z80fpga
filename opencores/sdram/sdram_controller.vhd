@@ -454,7 +454,7 @@ begin
     if (current_init_state = INIT_MODE_REG) then
       dram_addr_r <= MODE_REGISTER;
     elsif (current_init_state = INIT_INIT_PRE) then
-      dram_addr_r <= "10000000000";  --// precharge all
+      dram_addr_r <= "010000000000";  --// precharge all
     elsif (current_state = ACT_ST) then
       dram_addr_r <= address_r(19 downto 8);
       dram_bank_r <= address_r(21 downto 20);
