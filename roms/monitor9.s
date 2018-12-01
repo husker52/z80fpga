@@ -41,8 +41,8 @@ CHAR = 0x400F	; Storage for character to be printed
 	.globl	TXCRLF
 
 	.globl	DISAS
-	.area	CODE (REL)
-	.module	mon
+	.area	INTVEC(ABS)
+	.module	interrupts
 	.ORG	0x0000		; MONITOR ROM RESET VECTOR
 ;------------------------------------------------------------------------------
 ; TX a character over RS232 Channel A [Host], wait for TXDONE first.
@@ -167,6 +167,8 @@ RST66:	push	af
 
 	;JR   RST38	; Just play like it's an INT in IM 1
 
+	.area CODE
+;	.module mon
 ;------------------------------------------------------------------------------
 ; Monitor Entry point following an Error
 ;------------------------------------------------------------------------------
@@ -1310,7 +1312,7 @@ LCDGETD:
 ; Print the bootup message on the LCD
 ;------------------------------------------------------------------------------
 LCDMSG:	CALL	LCDCLS		; Clear the LCD
-	LD	HL,LCDTXT1	; Point to first line of text
+	LD	HL,#LCDTXT1	; Point to first line of text
 LCDMSG1:
 	LD	A,(HL)		; Get character
 	OR	A		; Terminator?
@@ -1319,7 +1321,7 @@ LCDMSG1:
 	INC	HL		; Next character
 	JR	LCDMSG1		; Loop until line done
 LCDMSG2:
-	LD	HL,LCDTXT2	; Point to next line of text
+	LD	HL,#LCDTXT2	; Point to next line of text
 	LD	A,#0x40		; Second line
 	CALL	LCDSETP		; Set the position
 LCDMSG3:
@@ -1389,7 +1391,7 @@ INIT16550:
 ; Set the SIO device settings
 ;------------------------------------------------------------------------------
 INITSIO:
-	LD   HL,SIODAT		; Location of SIO control strings
+	LD   HL,#SIODAT		; Location of SIO control strings
 	LD   C,#0x76		; Z80 SIO Port A Ctrl
 	LD   B,#0x0A		; Number of control characters           		
 	OUTI			; Output it to the port
@@ -1442,7 +1444,7 @@ INITLCD:
 	LD	A,#0x38		; 8-bit data, 2 Lines, 5x7 font
 	OUT	(#0x7C),A
 	CALL	LCDBUSY		; Check LCD Status for Busy
-	LD	HL,CGRAM		; Start Custom character map
+	LD	HL,#CGRAM		; Start Custom character map
 	LD	A,#0x40		; Set start of CGRAM in LCD
 	OUT	(#0x7C),A
 INITLCD0:
@@ -1497,19 +1499,19 @@ PIT3:	OUT  (#0x6F),A		; Output PIT control byte
 ;------------------------------------------------------------------------------
 ; Calculate ROM checksums
 ;------------------------------------------------------------------------------
-RMCKSM:	LD	HL,ROM0		; THIS MONITOR ROM
+RMCKSM:	LD	HL,#ROM0		; THIS MONITOR ROM
 	CALL	RCKSUM		; CALC THE CHECKSUM
 	CALL	TXSPC		; PRINT A SPACE
 ;--------------------------------------------------------------------------------------	
-	LD	HL,ROM1		; BASIC ONE ROM
+	LD	HL,#ROM1		; BASIC ONE ROM
 	CALL	RCKSUM		; GET THE CHECKSUM
 	CALL	TXSPC		; PRINT A SPACE
 ;--------------------------------------------------------------------------------------		
-	LD	HL,ROM2
+	LD	HL,#ROM2
 	CALL	RCKSUM		; GET THE CHECKSUM IN DE
 	CALL	TXSPC		; PRINT ANOTHER SPACE
 ;--------------------------------------------------------------------------------------		
-	LD	HL,ROM3
+	LD	HL,#ROM3
 	CALL	RCKSUM		; GET THE CHECKSUM IN DE
 ;--------------------------------------------------------------------------------------		
 	CALL	TXCRLF		; TXCRLF
@@ -1774,4 +1776,4 @@ TDATA:	.ascii	"Joel Owens"
 ;------------------------------------------------------------------------------	
 
 FINIS:
-	.END
+;	.END
