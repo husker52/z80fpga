@@ -17,4 +17,5 @@
 *.qws
 *.qdf
 *.bak
-hdl_tools/*
+hdl_tools/
+altera/

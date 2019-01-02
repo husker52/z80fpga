@@ -11,17 +11,19 @@
 	.globl	CHROP
 	.globl	CPHLDE
 	.globl	TXCRLF
+	.globl	HLOUT
+	.globl	TESTM
 	
-	.area	CODE(REL)
+	.area	_CODE
 ;------------------------------------------------------------------------------
 DISAS:	NOP			
 DISASS:	CALL	GETXY		;GET XXXX=DE (START), YYYY=HL (END)
 	INC	HL
 	PUSH	HL		;STORE END OF DISASSEMBLE HUNT
-
+	
 BLOOP:	PUSH	DE
-	CALL	DISZ80		;DISASSEMBLE INSTRUCTION AT (DE)
-
+;	CALL	DISZ80		;DISASSEMBLE INSTRUCTION AT (DE)
+	
 	LD	B,#3
 GAP:	LD	A,#0x20		;<SPACE>
 	CALL	CHROP		;PRINT 3 SPACES
@@ -84,14 +86,14 @@ TRYNDX:	CALL 	FETCH		;Convert byte at DE to Hex,print,update pointers
        	CP 	#0xFD		;IY specific op codes
        	JR 	NZ,NOTNDX		;Else it must be some other code
 ;----------------------------------------------------------------------------------------
-CONFLG:	LD 	(IX+1),B
+CONFLG:	LD 	1(IX),B
        	INC 	B
        	DJNZ 	TRYNDX
 
        	JR 	NXBYTE
 ;----------------------------------------------------------------------------------------
 NOTNDX:	LD 	C,A		;Save op code byte to C
-       	LD 	A,(IX+1)
+       	LD 	A,1(IX)
        	OR 	A
        	JR 	Z,NODISP		;No two-byte op code
 
@@ -109,7 +111,7 @@ NOTNDX:	LD 	C,A		;Save op code byte to C
        	JR 	NZ,NODISP
 ;----------------------------------------------------------------------------------------
 GETDIS:	CALL 	FETCH		;Get second byte of two byte op code
-       	LD 	(IX+2),A	;Save it
+       	LD 	2(IX),A	;Save it
 
 NODISP:	LD 	HL,#GROUP1
        	LD 	A,C
@@ -451,7 +453,7 @@ R8:    	AND 	#7
        	LD 	(HL),#"("		;Bracket
        	INC 	HL
        	CALL 	REGX
-       	LD 	A,(IX+2)
+       	LD 	A,2(IX)
        	OR 	A
        	JR 	Z,RP
 
@@ -526,7 +528,7 @@ RP:    	LD 	(HL),#")"
        	INC 	HL
        	RET
 
-REGX:  	LD 	A,(IX+1)
+REGX:  	LD 	A,1(IX)
        	ADD 	A,#0x10
 
 PS4:   	EX 	DE,HL
